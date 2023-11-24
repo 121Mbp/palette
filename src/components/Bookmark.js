@@ -4,10 +4,9 @@ import { DefaultCopyField } from '@eisberg-labs/mui-copy-field'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import Snackbar from '@mui/material/Snackbar'
-import Slide from '@mui/material/Slide'
 import DataObjectIcon from '@mui/icons-material/DataObject'
+import Tooltip from '@mui/material/Tooltip'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-
 
 const Aside = styled.div`
     position: fixed;
@@ -24,7 +23,6 @@ const Aside = styled.div`
         width: 60px;
     }
 `
-
 const Logo = styled.div`
     display: flex;
     justify-content: center;
@@ -41,6 +39,16 @@ const Logo = styled.div`
             width: 2rem;
             height: 2rem;
         }
+    }
+    &.active {
+        animation: bounce 1s ease infinite;
+    }
+    @keyframes bounce {
+        30% { transform: scale(1.2); }
+        40%, 60% { transform: rotate(-20deg) scale(1.2); }
+        50% { transform: rotate(20deg) scale(1.2); }
+        70% { transform: rotate(0deg) scale(1.2); }
+        100% { transform: scale(1); }
     }
 `
 const Inner = styled.div`
@@ -147,15 +155,12 @@ const Naming = styled.div`
     }
 `
 
-function SlideTransition(props) {
-    return <Slide {...props} direction='left' />;
-}
-
-function Bookmark({ db, textHex, backgroundHex, addLocalStrage }) {
+function Bookmark({ db, textHex, backgroundHex, addLocalStrage, save }) {
     const [state, setState] = useState({
+        vertical: 'top',
+        horizontal: 'right',
         open: false,
         message: '',
-        SlideTransition
     })
 
     const styleColorGuide = db.map((item, i) => {
@@ -163,7 +168,7 @@ function Bookmark({ db, textHex, backgroundHex, addLocalStrage }) {
     }).join('')
 
     const onClipboard = () => {
-        setState({ open: true, message: '복사되었습니다.' })
+        setState({ ...state, open: true, message: '복사되었습니다.' })
     }
 
     const snackbarClose = () => {
@@ -172,15 +177,17 @@ function Bookmark({ db, textHex, backgroundHex, addLocalStrage }) {
     
     return (
         <Aside style={{ borderColor: `#${textHex}` }}>
-            <Logo>
-                <IconButton 
-                    size='small' 
-                    style={{ color: `#${textHex}` }} 
-                >
-                    <CopyToClipboard text={ styleColorGuide } onCopy={ onClipboard }>
-                        <DataObjectIcon />
-                    </CopyToClipboard>
-                </IconButton> 
+            <Logo className={ save ? 'active' : '' }>
+                <Tooltip title='{ }'>
+                    <IconButton 
+                        size='small' 
+                        style={{ color: `#${textHex}` }} 
+                    >
+                        <CopyToClipboard text={ styleColorGuide } onCopy={ onClipboard }>
+                            <DataObjectIcon />
+                        </CopyToClipboard>
+                    </IconButton> 
+                </Tooltip>
             </Logo>
             <Inner>
                 <ColorList>
@@ -204,9 +211,11 @@ function Bookmark({ db, textHex, backgroundHex, addLocalStrage }) {
 }
 
 function BookmarkList({ db, item, textHex, backgroundHex, addLocalStrage, state, setState, snackbarClose }) {
+    const { vertical, horizontal } = state;
+
     const removed = () => {
         const result = db.filter((acc, i) => acc.hex.clean !== item.hex.clean);
-        setState({ open: true, message: '삭제 되었습니다.' })
+        setState({ ...state, open: true, message: '삭제 되었습니다.' })
         addLocalStrage(result)
         localStorage.removeItem('palette')
         localStorage.setItem('palette', JSON.stringify(result))
@@ -228,6 +237,7 @@ function BookmarkList({ db, item, textHex, backgroundHex, addLocalStrage, state,
                 </IconButton>  
             </ColorItem>
             <Snackbar
+                anchorOrigin={{ vertical, horizontal }}
                 open={ state.open }
                 onClose={ snackbarClose }
                 message= { state.message }

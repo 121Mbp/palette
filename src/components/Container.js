@@ -51,7 +51,7 @@ const Dominic = styled.a`
 `
 
 const convert = require('color-convert')
-const textArr = [ 200, 100, 20 ]
+const textArr = [ 279, 42, 20 ]
 const backgroundArr = [ 158, 100, 50 ]
 function Container() {
     const [text, setText] = useState(textArr)
@@ -59,6 +59,7 @@ function Container() {
     const [textHex, setTextHex] = useState('')
     const [backgroundHex, setBackgroundHex] = useState('')
     const [db, setDB] = useState(JSON.parse(localStorage.getItem('palette')) || [])
+    const [save, setSave] = useState(false)
     
     useEffect(() => {
         setTextHex(hslToHex(text))
@@ -98,6 +99,7 @@ function Container() {
                         color={ textChange } 
                         addLocalStrage={ addLocalStrage }
                         db={ db }
+                        setSave={ setSave }
                     />
                     <Fraction 
                         name={ 'Background' }
@@ -107,6 +109,7 @@ function Container() {
                         color={ backgroundChange } 
                         addLocalStrage={ addLocalStrage }
                         db={ db }
+                        setSave={ setSave }
                     />
                 </Contrast>
             </Backwards>
@@ -115,6 +118,7 @@ function Container() {
                 addLocalStrage={ addLocalStrage }
                 textHex={ textHex } 
                 backgroundHex={ backgroundHex } 
+                save={ save }
             />
             <Footers>
                 <Dominic style={{ color: `#${textHex}` }} onClick={()=>{

@@ -6,7 +6,7 @@ import Slider from '@mui/material/Slider'
 import IconButton from '@mui/material/IconButton'
 import AddIcon from '@mui/icons-material/Add'
 import Snackbar from '@mui/material/Snackbar'
-import Slide from '@mui/material/Slide'
+import Tooltip from '@mui/material/Tooltip'
 import axios from 'axios'
 
 const BoxStyled = styled(Box)`
@@ -41,6 +41,9 @@ const Label = styled.label`
             @media screen and (max-width: 576px) {
                 font-size: 2.6rem;
             }
+            @media screen and (max-width: 472px) {
+                font-size: 2.2rem;
+            }
         }
     `}
     + span {
@@ -51,7 +54,11 @@ const Label = styled.label`
         position: absolute;
         top: 42%;
         right: 10%;
-        color: ${ props=>props.iconColor }
+        color: ${ props=>props.iconColor };
+        @media screen and (max-width: 472px) {
+            top: 38%;
+            right: 16%;
+        }
     }
 `
 const Input = styled(DefaultCopyField)`
@@ -65,6 +72,9 @@ const Input = styled(DefaultCopyField)`
     @media screen and (max-width: 576px) {
         font-size: 2.6rem;
     }
+    @media screen and (max-width: 472px) {
+        font-size: 2.2rem;
+    }
     div {
         font-size: inherit;
         font-family: inherit;
@@ -73,7 +83,7 @@ const Input = styled(DefaultCopyField)`
         padding: 0;
     }
     svg {
-        color: ${ props=>props.placeholderTextColor }
+        color: ${ props=>props.placeholderTextColor };
     }
     fieldset {
         border: 0;
@@ -88,8 +98,11 @@ const Input = styled(DefaultCopyField)`
         @media screen and (max-width: 576px) {
             padding-left: 2.1rem;
         }
+        @media screen and (max-width: 472px) {
+            padding-left: 1.8rem;
+        }
         &::-webkit-input-placeholder {
-            color: ${ props=>props.placeholderTextColor }
+            color: ${ props=>props.placeholderTextColor };
         }
     }    
 `
@@ -97,21 +110,20 @@ const Controller = styled.div`
     margin-bottom: .6rem;
 `
 
-function SlideTransition(props) {
-    return <Slide {...props} direction='left' />;
-}
-
 const convert = require('color-convert')
-function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStrage }) {
+function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStrage, setSave }) {
     const [textName, setTextName] = useState('')
     const [backgroundName, setBackgroundName] = useState('')
     const [range, setRange] = useState(origin)
     const [hex, setHex] = useState(convert.hsl.hex(origin))
     const [state, setState] = useState({
+        vertical: 'top',
+        horizontal: 'right',
         open: false,
         message: '',
-        SlideTransition
     })
+
+    const { vertical, horizontal } = state;
 
     function fetchData() {
         if(textHex !== '' && backgroundHex !== '') {
@@ -154,6 +166,9 @@ function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStr
     }
 
     const onBookmarkAdd = () => {
+        if(hex.length < 6){
+            return setState({ ...state, open: true, message: '6자리로 입력해 주세요.' })
+        }
         axios.get(`https://www.thecolorapi.com/id?hex=${hex}`)
         .then(response => {
             const res = [...db, response.data]
@@ -162,9 +177,10 @@ function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStr
                 return acc.find(x => x.hex.clean === i.hex.clean) ? acc : [...acc, i]
             }, [])
             if (ref.length === result.length){
-                setState({ open: true, message: '저장 되었습니다.' })
+                setState({ ...state, open: true, message: '저장 되었습니다.' })
+                setSave(true)
             } else {
-                setState({ open: true, message: '이미 등록되어 있습니다.' })
+                setState({ ...state, open: true, message: '이미 등록되어 있습니다.' })
             }
             addLocalStrage(result)
             localStorage.setItem('palette', JSON.stringify(result))
@@ -173,6 +189,7 @@ function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStr
 
     const snackbarClose = () => {
         setState({ ...state, open: false, message: '' })
+        setSave(false)
     }
         
     return (
@@ -188,9 +205,11 @@ function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStr
                         placeholder='000000'
                         placeholderTextColor={ `#${textHex}` }
                     />
-                    <IconButton size='small' onClick={ onBookmarkAdd }>
-                        <AddIcon />
-                    </IconButton>    
+                    <Tooltip title='Save'>
+                        <IconButton size='small' onClick={ onBookmarkAdd }>
+                            <AddIcon />
+                        </IconButton>    
+                    </Tooltip>
                 </Label>
                 <Controller>
                     <Label>Hue { range[0] }°</Label>
@@ -226,6 +245,7 @@ function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStr
                 </Controller>
             </BoxStyled>
             <Snackbar
+                anchorOrigin={{ vertical, horizontal }}
                 open={ state.open }
                 onClose={ snackbarClose }
                 message= { state.message }
