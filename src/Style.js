@@ -29,8 +29,11 @@ const Wrap = styled.div`
 `
 const Layout = styled.div`
     min-height: 100vh;
-    padding: 48px;
+    padding: 48px 48px 48px 120px;
     transition: background-color 0.1s ease-out 0s;
+    @media screen and (max-width: 576px) {
+        padding: 24px 24px 24px 80px;
+    }
 `
 
 export { 

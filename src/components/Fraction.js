@@ -1,14 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import styled from 'styled-components'
+import { DefaultCopyField } from '@eisberg-labs/mui-copy-field'
 import Box from '@mui/material/Box'
 import Slider from '@mui/material/Slider'
+import IconButton from '@mui/material/IconButton'
+import AddIcon from '@mui/icons-material/Add'
+import Snackbar from '@mui/material/Snackbar'
+import Slide from '@mui/material/Slide'
+import axios from 'axios'
 
 const BoxStyled = styled(Box)`
     display: flex;
     flex-direction: column;
-    margin: 0 .8rem;
+    margin: 0 1rem;
+    width: 100%;
+    @media screen and (max-width: 576px) {
+        margin: 0;
+    }
 `
-
 const Label = styled.label`
     position: relative;
     margin: .4rem;
@@ -26,27 +35,96 @@ const Label = styled.label`
             display: flex;
             align-items: end;
             line-height: 1.2;
+            @media screen and (max-width: 1200px) {
+                font-size: 3rem;
+            }
+            @media screen and (max-width: 576px) {
+                font-size: 2.6rem;
+            }
         }
     `}
     + span {
         display: block;
         top: -.2rem;
     }
+    > button {
+        position: absolute;
+        top: 42%;
+        right: 10%;
+        color: ${ props=>props.iconColor }
+    }
 `
-
-const Input = styled.input`
+const Input = styled(DefaultCopyField)`
     display: block;
     width: 100%;
     color: inherit;
     font-size: 4.5rem;
-    padding-left: 3rem;
+    @media screen and (max-width: 1200px) {
+        font-size: 3rem;
+    }
+    @media screen and (max-width: 576px) {
+        font-size: 2.6rem;
+    }
+    div {
+        font-size: inherit;
+        font-family: inherit;
+        color: inherit;
+        border-radius: 0;
+        padding: 0;
+    }
+    svg {
+        color: ${ props=>props.placeholderTextColor }
+    }
+    fieldset {
+        border: 0;
+    }
+    input {
+        height: 100%;
+        padding: 0;
+        padding-left: 3.4rem;
+        @media screen and (max-width: 1200px) {
+            padding-left: 2.6rem;
+        }
+        @media screen and (max-width: 576px) {
+            padding-left: 2.1rem;
+        }
+        &::-webkit-input-placeholder {
+            color: ${ props=>props.placeholderTextColor }
+        }
+    }    
 `
-
 const Controller = styled.div`
     margin-bottom: .6rem;
 `
 
-function Fraction({ name, origin, color, textHex, backgroundHex, init }) {
+function SlideTransition(props) {
+    return <Slide {...props} direction='left' />;
+}
+
+const convert = require('color-convert')
+function Fraction({ name, origin, color, textHex, backgroundHex, db, addLocalStrage }) {
+    const [textName, setTextName] = useState('')
+    const [backgroundName, setBackgroundName] = useState('')
+    const [range, setRange] = useState(origin)
+    const [hex, setHex] = useState(convert.hsl.hex(origin))
+    const [state, setState] = useState({
+        open: false,
+        message: '',
+        SlideTransition
+    })
+
+    function fetchData() {
+        if(textHex !== '' && backgroundHex !== '') {
+            axios.all([
+                axios.get(`https://www.thecolorapi.com/id?hex=${textHex}`),
+                axios.get(`https://www.thecolorapi.com/id?hex=${backgroundHex}`)
+            ]).then(axios.spread((text, background) => {
+                setTextName(text.data.name.value);
+                setBackgroundName(background.data.name.value)
+            }))
+        }
+    }
+    
     const handleChange = (e, value) => {
         let arr = [...origin]
         if(e.target.name === 'x'){
@@ -56,48 +134,102 @@ function Fraction({ name, origin, color, textHex, backgroundHex, init }) {
         } else if(e.target.name === 'z') {
             arr[2] = value
         }
-        color(arr)
+        color(arr)    
+        setRange(arr)
+        setHex(convert.hsl.hex(arr))
     }
-    const handleHex = (e) => {
-        // hex(e.target.value)
+
+    const handleInput = (e) => {
+        const hexToHsl = convert.hex.hsl(e.target.value)
+        color(range)
+        setHex(e.target.value)
+        setRange(hexToHsl)
+        if(e.target.value.length === 0 || e.target.value.length === 3 || e.target.value.length === 6) {
+            fetchData()
+        } 
+    }
+
+    const committed = () => {
+        fetchData()
+    }
+
+    const onBookmarkAdd = () => {
+        axios.get(`https://www.thecolorapi.com/id?hex=${hex}`)
+        .then(response => {
+            const res = [...db, response.data]
+            const ref = res !== 0 && res.filter((item, i) => item !== null);
+            const result = ref.reduce((acc, i) => {
+                return acc.find(x => x.hex.clean === i.hex.clean) ? acc : [...acc, i]
+            }, [])
+            if (ref.length === result.length){
+                setState({ open: true, message: '저장 되었습니다.' })
+            } else {
+                setState({ open: true, message: '이미 등록되어 있습니다.' })
+            }
+            addLocalStrage(result)
+            localStorage.setItem('palette', JSON.stringify(result))
+        })       
+    }
+
+    const snackbarClose = () => {
+        setState({ ...state, open: false, message: '' })
     }
         
     return (
         <>
             <BoxStyled style={{ color: `#${textHex}` }}>
-                <Label htmlFor='text' title={ 'true' }>{ name }
-                    <Input id='text' value={ name === 'Text' ? textHex : backgroundHex } onChange={ handleHex } />
+                <Label htmlFor='text' title={ 'true' } iconColor={ `#${textHex}` }>
+                    { name } - { name === 'Text' ? textName : backgroundName }
+                    <Input 
+                        id='text' 
+                        maxLength={6}
+                        value={ hex }
+                        onChange={ handleInput } 
+                        placeholder='000000'
+                        placeholderTextColor={ `#${textHex}` }
+                    />
+                    <IconButton size='small' onClick={ onBookmarkAdd }>
+                        <AddIcon />
+                    </IconButton>    
                 </Label>
                 <Controller>
-                    <Label>Hue { origin[0] }°</Label>
-                    <Slider 
-                        defaultValue={ init[0] }
+                    <Label>Hue { range[0] }°</Label>
+                    <Slider
+                        value={ range[0] }
                         min={ 0 }
                         max={ 360 }
                         onChange={ handleChange } 
                         name='x' 
                         style={{ color: `#${textHex}` }}
+                        onChangeCommitted={ committed }
                     />
                 </Controller>
                 <Controller>
-                    <Label>Saturation { origin[1] / 100 }</Label>
+                    <Label>Saturation { range[1] / 100 }</Label>
                     <Slider 
-                        defaultValue={ init[1] } 
+                        value={ range[1] }
                         onChange={ handleChange } 
                         name='y' 
                         style={{ color: `#${textHex}` }}
+                        onChangeCommitted={ committed }
                     />
                 </Controller>
                 <Controller>
-                    <Label>Lightness { origin[2] / 100 }</Label>
+                    <Label>Lightness { range[2] / 100 }</Label>
                     <Slider 
-                        defaultValue={ init[2] } 
+                        value={ range[2] }
                         onChange={ handleChange } 
                         name='z' 
                         style={{ color: `#${textHex}` }}
+                        onChangeCommitted={ committed }
                     />
                 </Controller>
             </BoxStyled>
+            <Snackbar
+                open={ state.open }
+                onClose={ snackbarClose }
+                message= { state.message }
+            />
         </>
     )
 }
