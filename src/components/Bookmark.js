@@ -164,7 +164,7 @@ function Bookmark({ db, textHex, backgroundHex, addLocalStrage, save }) {
     })
 
     const styleColorGuide = db.map((item, i) => {
-        return `\n$${(item.name.value).replace(' ', '')}-${item.hsl.l}: '${item.hex.value}';`
+        return `\n$color-${(item.name.value).replace(' ', '')}: '${item.hex.value}';`
     }).join('')
 
     const onClipboard = () => {
